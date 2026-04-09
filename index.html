@@ -1,0 +1,867 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>כשמודל שפה פוגש הפרעת קשב — סדנה מעשית</title>
+  <meta name="description" content="מסמך תרחישים אינטראקטיבי לסדנה מעשית: שימוש במודלי שפה לתמיכה באנשים עם הפרעות קשב וריכוז">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+  <style>
+    /* ── Design Tokens ── */
+    :root {
+      --bg: #0f0f1a;
+      --surface: #1a1a2e;
+      --surface-hover: #222240;
+      --border: rgba(124, 58, 237, 0.15);
+      --border-hover: rgba(124, 58, 237, 0.5);
+      --primary: #7c3aed;
+      --primary-light: #a78bfa;
+      --secondary: #06d6a0;
+      --accent: #f72585;
+      --accent-2: #4cc9f0;
+      --energy: #ffd60a;
+      --text: #f0f0f5;
+      --text-muted: #8b8ba3;
+      --overlay: rgba(15, 15, 26, 0.9);
+      --font: 'Heebo', sans-serif;
+      --text-xs: clamp(0.7rem, 0.65rem + 0.25vw, 0.75rem);
+      --text-sm: clamp(0.8rem, 0.75rem + 0.25vw, 0.875rem);
+      --text-base: clamp(0.95rem, 0.9rem + 0.25vw, 1rem);
+      --text-lg: clamp(1.1rem, 1rem + 0.5vw, 1.25rem);
+      --text-xl: clamp(1.3rem, 1.1rem + 1vw, 1.563rem);
+      --text-2xl: clamp(1.6rem, 1.3rem + 1.5vw, 1.953rem);
+      --text-3xl: clamp(2rem, 1.5rem + 2.5vw, 2.441rem);
+      --text-4xl: clamp(2.4rem, 1.7rem + 3.5vw, 3.052rem);
+      --text-5xl: clamp(2.8rem, 1.8rem + 5vw, 4rem);
+      --space-xs: 0.25rem;
+      --space-sm: 0.5rem;
+      --space-md: 1rem;
+      --space-lg: 2rem;
+      --space-xl: 4rem;
+      --space-2xl: 6rem;
+      --radius-sm: 8px;
+      --radius: 16px;
+      --radius-lg: 24px;
+      --radius-full: 9999px;
+      --ease: cubic-bezier(0.4, 0, 0.2, 1);
+      --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+      --duration: 0.3s;
+      --glow-primary: 0 0 20px rgba(124, 58, 237, 0.3);
+      --glow-secondary: 0 0 20px rgba(6, 214, 160, 0.3);
+      --glow-accent: 0 0 20px rgba(247, 37, 133, 0.3);
+      --shadow-card: 0 4px 24px rgba(0, 0, 0, 0.3);
+    }
+
+    /* ── Reset ── */
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+    html { scroll-behavior: smooth; direction: rtl; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font);
+      font-size: var(--text-base);
+      line-height: 1.8;
+      overflow-x: hidden;
+      min-height: 100vh;
+      -webkit-font-smoothing: antialiased;
+    }
+    img { display: block; max-width: 100%; }
+    a { color: inherit; text-decoration: none; }
+    button { font: inherit; cursor: pointer; border: none; background: none; color: inherit; }
+    ul, ol { list-style: none; }
+
+    /* ── Background Blobs ── */
+    .blob {
+      position: fixed;
+      border-radius: 50%;
+      filter: blur(120px);
+      opacity: 0.12;
+      pointer-events: none;
+      z-index: -1;
+    }
+    .blob-1 { width: 600px; height: 600px; background: var(--primary); top: -200px; right: -200px; animation: bf 20s ease-in-out infinite; }
+    .blob-2 { width: 500px; height: 500px; background: var(--accent); bottom: -150px; left: -150px; animation: bf 25s ease-in-out infinite reverse; }
+    .blob-3 { width: 400px; height: 400px; background: var(--secondary); top: 50%; left: 50%; transform: translate(-50%, -50%); animation: bf 30s ease-in-out infinite; }
+    @keyframes bf {
+      0%, 100% { transform: translate(0, 0) scale(1); }
+      25% { transform: translate(30px, -50px) scale(1.1); }
+      50% { transform: translate(-20px, 20px) scale(0.9); }
+      75% { transform: translate(40px, 30px) scale(1.05); }
+    }
+
+    /* ── Navbar ── */
+    .navbar {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 1000;
+      padding: var(--space-sm) var(--space-lg);
+      background: var(--overlay);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border-bottom: 1px solid var(--border);
+    }
+    .navbar-inner {
+      max-width: 1100px; margin: 0 auto;
+      display: flex; align-items: center; justify-content: space-between; gap: var(--space-lg);
+    }
+    .navbar-logo { display: flex; align-items: center; gap: var(--space-sm); }
+    .navbar-logo img { height: 36px; width: auto; }
+    .navbar-links { display: flex; align-items: center; gap: var(--space-xs); flex-direction: row-reverse; }
+    .navbar-links a {
+      padding: var(--space-xs) var(--space-sm);
+      font-size: var(--text-sm); font-weight: 500;
+      color: var(--text-muted); border-radius: var(--radius-sm);
+      transition: color var(--duration) var(--ease), background var(--duration) var(--ease);
+    }
+    .navbar-links a:hover { color: var(--text); background: rgba(124, 58, 237, 0.1); }
+    .navbar-links a:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+    .nav-toggle { display: none; flex-direction: column; gap: 5px; padding: var(--space-xs); }
+    .nav-toggle span { width: 24px; height: 2px; background: var(--text); border-radius: 2px; transition: transform var(--duration) var(--ease); }
+    @media (max-width: 768px) {
+      .nav-toggle { display: flex; }
+      .navbar-links {
+        display: none; position: absolute; top: 100%; left: 0; right: 0;
+        background: var(--overlay); backdrop-filter: blur(20px);
+        padding: var(--space-md) var(--space-lg);
+        flex-direction: column; align-items: stretch;
+        border-bottom: 1px solid var(--border);
+      }
+      .navbar-links.open { display: flex; }
+      .navbar-links a { padding: var(--space-sm) var(--space-md); text-align: center; }
+    }
+
+    /* ── Layout ── */
+    .container { width: 100%; max-width: 900px; margin: 0 auto; padding: 0 var(--space-lg); }
+    .page-content { padding-top: 70px; }
+
+    /* ── Hero ── */
+    .hero {
+      min-height: 60vh; display: flex; flex-direction: column;
+      align-items: center; justify-content: center; text-align: center;
+      padding: var(--space-2xl) var(--space-lg) var(--space-xl);
+      position: relative;
+    }
+    .hero h1 {
+      font-size: var(--text-5xl); font-weight: 900;
+      margin-block-end: var(--space-md); line-height: 1.15;
+    }
+    .hero .gradient-text {
+      background: linear-gradient(135deg, var(--primary-light), var(--accent), var(--secondary));
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+    }
+    .hero p { max-width: 55ch; margin-inline: auto; font-size: var(--text-lg); color: var(--text-muted); }
+    .hero .author { margin-block-start: var(--space-md); font-size: var(--text-sm); color: var(--text-muted); }
+    .hero .author strong { color: var(--primary-light); }
+
+    /* ── Global Banner ── */
+    .global-banner {
+      background: linear-gradient(135deg, rgba(124, 58, 237, 0.15), rgba(6, 214, 160, 0.1));
+      border: 1px solid rgba(124, 58, 237, 0.25);
+      border-radius: var(--radius);
+      padding: var(--space-lg);
+      margin-block-end: var(--space-xl);
+      text-align: center;
+      position: relative;
+    }
+    .global-banner::before {
+      content: "\1F4A1";
+      font-size: 1.5rem;
+      display: block;
+      margin-block-end: var(--space-sm);
+    }
+    .global-banner p {
+      font-size: var(--text-lg); font-weight: 500; color: var(--text);
+      max-width: 60ch; margin-inline: auto;
+    }
+    .global-banner .sub {
+      font-size: var(--text-sm); color: var(--text-muted); margin-block-start: var(--space-sm);
+    }
+
+    /* ── Sections ── */
+    .section { padding: var(--space-xl) 0; }
+    .section-title { margin-block-end: var(--space-xl); text-align: center; }
+    .section-title h2 { font-size: var(--text-3xl); font-weight: 900; margin-block-end: var(--space-sm); }
+    .section-title p { color: var(--text-muted); max-width: 50ch; margin-inline: auto; }
+
+    /* ── Intro ── */
+    .intro-text { max-width: 70ch; margin-inline: auto; }
+    .intro-text p { margin-block-end: var(--space-md); color: var(--text-muted); font-size: var(--text-base); line-height: 1.9; }
+    .intro-disclaimer {
+      background: rgba(247, 37, 133, 0.08);
+      border-inline-start: 4px solid var(--accent);
+      padding: var(--space-md) var(--space-lg);
+      border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+      margin-block-start: var(--space-lg);
+    }
+    .intro-disclaimer p { color: var(--accent); font-weight: 500; max-width: none; }
+
+    /* ── Scenario Card ── */
+    .scenario-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: var(--space-lg) var(--space-lg) var(--space-lg);
+      margin-block-end: var(--space-lg);
+      transition: border-color var(--duration) var(--ease), box-shadow var(--duration) var(--ease);
+      opacity: 0; transform: translateY(30px);
+    }
+    .scenario-card.visible { opacity: 1; transform: translateY(0); transition: opacity 0.6s var(--ease), transform 0.6s var(--ease); }
+    .scenario-card:hover { border-color: var(--border-hover); box-shadow: var(--glow-primary); }
+
+    .scenario-header { display: flex; align-items: center; gap: var(--space-md); margin-block-end: var(--space-md); flex-wrap: wrap; }
+    .scenario-num {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 44px; height: 44px; border-radius: var(--radius-full);
+      background: var(--primary); color: white; font-weight: 900; font-size: var(--text-lg);
+      flex-shrink: 0;
+    }
+    .scenario-title { font-size: var(--text-xl); font-weight: 700; flex: 1; min-width: 200px; }
+    .badge {
+      display: inline-flex; align-items: center; padding: 3px 12px;
+      font-size: var(--text-xs); font-weight: 600; border-radius: var(--radius-full);
+      letter-spacing: 0.03em; white-space: nowrap;
+    }
+    .badge-purple { background: rgba(124, 58, 237, 0.2); color: var(--primary-light); }
+    .badge-cyan { background: rgba(76, 201, 240, 0.2); color: var(--accent-2); }
+    .badge-yellow { background: rgba(255, 214, 10, 0.2); color: var(--energy); }
+    .badge-pink { background: rgba(247, 37, 133, 0.2); color: var(--accent); }
+    .badge-teal { background: rgba(6, 214, 160, 0.2); color: var(--secondary); }
+
+    .scenario-body p { color: var(--text-muted); margin-block-end: var(--space-sm); line-height: 1.9; }
+    .scenario-body .situation-label { color: var(--primary-light); font-weight: 700; margin-block-start: var(--space-md); }
+
+    /* ── Prompt Block ── */
+    .prompt-block {
+      background: rgba(76, 201, 240, 0.06);
+      border: 1px solid rgba(76, 201, 240, 0.15);
+      border-radius: var(--radius);
+      padding: var(--space-lg);
+      margin-block-start: var(--space-md);
+      position: relative;
+    }
+    .prompt-label {
+      display: inline-flex; align-items: center; gap: var(--space-sm);
+      font-size: var(--text-sm); font-weight: 700; color: var(--accent-2);
+      margin-block-end: var(--space-sm);
+    }
+    .prompt-text { color: var(--text); font-size: var(--text-base); line-height: 1.9; white-space: pre-wrap; }
+    .copy-btn {
+      position: absolute; top: var(--space-md); left: var(--space-md);
+      display: inline-flex; align-items: center; gap: var(--space-xs);
+      padding: var(--space-xs) var(--space-sm);
+      background: rgba(76, 201, 240, 0.15); border: 1px solid rgba(76, 201, 240, 0.3);
+      border-radius: var(--radius-sm); color: var(--accent-2);
+      font-size: var(--text-xs); font-weight: 600;
+      transition: all var(--duration) var(--ease); cursor: pointer;
+    }
+    .copy-btn:hover { background: rgba(76, 201, 240, 0.25); transform: translateY(-1px); }
+    .copy-btn:focus-visible { outline: 2px solid var(--accent-2); outline-offset: 2px; }
+    .copy-btn.copied { background: rgba(6, 214, 160, 0.25); border-color: var(--secondary); color: var(--secondary); }
+    .copy-btn svg { width: 14px; height: 14px; }
+
+    /* ── Note / Warning / Tip blocks ── */
+    .note-block {
+      margin-block-start: var(--space-md);
+      padding: var(--space-md) var(--space-lg);
+      border-radius: var(--radius-sm);
+      font-size: var(--text-sm);
+      line-height: 1.8;
+    }
+    .note-block p { max-width: none; }
+    .note-info {
+      background: rgba(124, 58, 237, 0.08);
+      border-inline-start: 4px solid var(--primary-light);
+    }
+    .note-info p { color: var(--primary-light); }
+    .note-warning {
+      background: rgba(247, 37, 133, 0.08);
+      border-inline-start: 4px solid var(--accent);
+    }
+    .note-warning p { color: var(--accent); }
+    .note-tip {
+      background: rgba(6, 214, 160, 0.08);
+      border-inline-start: 4px solid var(--secondary);
+    }
+    .note-tip p { color: var(--secondary); }
+    .note-block a { color: var(--accent-2); text-decoration: underline; text-underline-offset: 3px; }
+    .note-block a:hover { color: var(--text); }
+
+    /* ── Extra copyable block (Scenario 7 assignment) ── */
+    .extra-block {
+      background: rgba(255, 214, 10, 0.05);
+      border: 1px solid rgba(255, 214, 10, 0.15);
+      border-radius: var(--radius);
+      padding: var(--space-lg);
+      margin-block-start: var(--space-md);
+      position: relative;
+    }
+    .extra-block .prompt-label { color: var(--energy); }
+    .extra-block .copy-btn {
+      background: rgba(255, 214, 10, 0.15); border-color: rgba(255, 214, 10, 0.3); color: var(--energy);
+    }
+    .extra-block .copy-btn:hover { background: rgba(255, 214, 10, 0.25); }
+    .extra-block .copy-btn.copied { background: rgba(6, 214, 160, 0.25); border-color: var(--secondary); color: var(--secondary); }
+
+    /* ── Tips Section ── */
+    .tips-grid { display: grid; gap: var(--space-md); }
+    .tip-card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: var(--space-lg);
+      display: flex; gap: var(--space-md); align-items: flex-start;
+      transition: border-color var(--duration) var(--ease), box-shadow var(--duration) var(--ease);
+    }
+    .tip-card:hover { border-color: var(--border-hover); box-shadow: var(--glow-primary); }
+    .tip-num {
+      display: inline-flex; align-items: center; justify-content: center;
+      min-width: 36px; height: 36px; border-radius: var(--radius-full);
+      background: rgba(124, 58, 237, 0.2); color: var(--primary-light);
+      font-weight: 900; font-size: var(--text-sm); flex-shrink: 0;
+    }
+    .tip-card p { color: var(--text-muted); line-height: 1.8; max-width: none; }
+    .tip-card strong { color: var(--text); }
+
+    /* ── Footer ── */
+    .site-footer {
+      padding: var(--space-xl) var(--space-lg) var(--space-lg);
+      text-align: center; font-size: var(--text-sm); color: var(--text-muted);
+      border-top: 1px solid var(--border);
+      margin-block-start: var(--space-xl);
+    }
+    .site-footer a { color: var(--primary-light); }
+    .site-footer a:hover { color: var(--accent); }
+
+    /* ── Accessibility ── */
+    *:focus-visible { outline: 2px solid var(--primary-light); outline-offset: 2px; }
+    .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; scroll-behavior: auto !important; }
+      .blob { animation: none; }
+      .scenario-card { opacity: 1; transform: none; }
+    }
+    @media (max-width: 640px) {
+      .container { padding: 0 var(--space-md); }
+      .scenario-card { padding: var(--space-md); }
+      .prompt-block, .extra-block { padding: var(--space-md); }
+      .copy-btn { position: static; margin-block-end: var(--space-sm); }
+      .hero h1 { font-size: var(--text-3xl); }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Background Blobs -->
+  <div class="blob blob-1" aria-hidden="true"></div>
+  <div class="blob blob-2" aria-hidden="true"></div>
+  <div class="blob blob-3" aria-hidden="true"></div>
+
+  <!-- Navbar -->
+  <nav class="navbar" role="navigation" aria-label="ניווט ראשי">
+    <div class="navbar-inner">
+      <a href="https://linktr.ee/TomHagiladi" class="navbar-logo" target="_blank" rel="noopener" aria-label="תום הגלעדי">
+        <img src="logo.png" alt="תום הגלעדי — לוגו" height="36">
+      </a>
+      <button class="nav-toggle" aria-label="פתח תפריט ניווט" aria-expanded="false" onclick="document.querySelector('.navbar-links').classList.toggle('open'); this.setAttribute('aria-expanded', this.getAttribute('aria-expanded')==='false')">
+        <span></span><span></span><span></span>
+      </button>
+      <div class="navbar-links">
+        <a href="#intro">מבוא</a>
+        <a href="#scenarios">תרחישים</a>
+        <a href="#tips">טיפים</a>
+      </div>
+    </div>
+  </nav>
+
+  <main class="page-content">
+    <!-- Hero -->
+    <section class="hero">
+      <h1><span class="gradient-text">כשמודל שפה פוגש הפרעת קשב</span></h1>
+      <p>מסמך תרחישים אינטראקטיבי לסדנה מעשית: שימוש במודלי שפה לתמיכה באנשים עם הפרעות קשב וריכוז</p>
+      <div class="author">נבנה על ידי <a href="https://linktr.ee/TomHagiladi" target="_blank" rel="noopener" style="color: var(--primary-light); text-decoration: none;"><strong>תום הגלעדי</strong></a> | אפריל 2026</div>
+    </section>
+
+    <div class="container">
+
+      <!-- Global Banner -->
+      <div class="global-banner">
+        <p>הפרומפטים במסמך הזה הם נקודת התחלה בלבד — התאימו אותם אליכם, לסיטואציה שלכם, ולשפה שנוחה לכם</p>
+        <p class="sub">וחשוב לא פחות: אל תסתפקו בתשובה הראשונה. המשיכו את השיחה עם מודל השפה, שאלו שאלות המשך, בקשו התאמות — ככה מפיקים את המקסימום</p>
+      </div>
+
+      <!-- Introduction -->
+      <section id="intro" class="section">
+        <div class="section-title">
+          <h2>מבוא</h2>
+        </div>
+        <div class="intro-text">
+          <p>הפרעת קשב וריכוז (ADHD) היא הפרעה נוירו-התפתחותית המשפיעה על מיליוני אנשים ברחבי העולם. היא מתבטאת במגוון רחב של אתגרים יומיומיים: קושי בריכוז, דחיינות, קשיים בארגון משימות, מעברים מהירים בין נושאים, קושי בוויסות רגשי, ועוד.</p>
+          <p>מודלי שפה גדולים (כמו ChatGPT, Claude, Gemini ואחרים) יכולים לשמש ככלי תומך עוצמתי עבור אנשים עם הפרעת קשב. הם מאפשרים "מיקור חוץ" של תפקודים ניהוליים (Executive Functions) — כלומר, להעביר חלק מהעומס הקוגניטיבי למכונה, ובכך לפנות משאבים מנטליים למה שבאמת חשוב.</p>
+          <p>מסמך זה מציג 12 תרחישים מעשיים שבהם מודל שפה יכול לתמוך במגוון מאפיינים של הפרעת קשב. לכל תרחיש מצורף פרומפט לדוגמה שניתן להעתיק ולתרגל.</p>
+          <div class="intro-disclaimer">
+            <p>חשוב להדגיש: מודל שפה הוא כלי תומך — לא תחליף לטיפול מקצועי, תרופות, או ליווי טיפולי.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- Scenarios -->
+      <section id="scenarios" class="section">
+        <div class="section-title">
+          <h2>התרחישים</h2>
+          <p>12 תרחישים מעשיים עם פרומפטים מוכנים להעתקה ותרגול</p>
+        </div>
+
+        <!-- Scenario 1 -->
+        <article class="scenario-card" data-scenario="1">
+          <div class="scenario-header">
+            <span class="scenario-num">1</span>
+            <span class="scenario-title">פירוק משימות מורכבות</span>
+            <span class="badge badge-purple">ארגון ותכנון</span>
+          </div>
+          <div class="scenario-body">
+            <p>אנשים עם הפרעת קשב מתקשים לעיתים קרובות להתמודד עם משימות גדולות ומורכבות. המשימה נראית כהר שאי אפשר לטפס עליו, מה שמוביל לדחיינות ולתחושת שיתוק. מודל שפה יכול לעזור לפרק את "ההר" לצעדים קטנים וברורים, לסדר אותם לפי סדר הגיוני, ולתת תחושת שליטה ובהירות.</p>
+            <p class="situation-label">הסיטואציה:</p>
+            <p>נועה, סטודנטית לתקשורת עם הפרעת קשב, קיבלה מטלה לכתוב עבודה סמינריונית. היא יושבת מול המחשב כבר שעה ולא מצליחה להתחיל. היא מרגישה מוצפת מגודל המשימה.</p>
+          </div>
+          <div class="prompt-block">
+            <button class="copy-btn" onclick="copyPrompt(this)" aria-label="העתק פרומפט">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+              העתק
+            </button>
+            <div class="prompt-label">פרומפט לתרגול:</div>
+            <div class="prompt-text">יש לי עבודה סמינריונית בנושא השפעת הרשתות החברתיות על בני נוער. מועד ההגשה בעוד שלושה שבועות. אני מרגישה מוצפת ולא יודעת מאיפה להתחיל. בבקשה עזור לי לפרק את המשימה הזו לצעדים קטנים וברורים, עם לוח זמנים מוצע לשלושת השבועות. ציין מה כדאי לעשות בכל יום, כמה זמן בערך להקדיש לכל שלב, ואילו צעדים אפשר לעשות במקביל.</div>
+          </div>
+          <div class="note-block note-tip">
+            <p><strong>טיפ:</strong> כדי לקבל תוצאה מדויקת יותר, מומלץ לצרף למודל השפה חומרים רלוונטיים — כמו סילבוס הקורס, דרישות המטלה, או חומרי הלימוד. ככל שהמודל מכיר יותר את ההקשר שלכם, כך הוא יוכל להתאים את התוכנית ספציפית אליכם.</p>
+          </div>
+        </article>
+
+        <!-- Scenario 2 -->
+        <article class="scenario-card" data-scenario="2">
+          <div class="scenario-header">
+            <span class="scenario-num">2</span>
+            <span class="scenario-title">סיכום וארגון מידע</span>
+            <span class="badge badge-cyan">קשב וריכוז</span>
+          </div>
+          <div class="scenario-body">
+            <p>קריאת מסמכים ארוכים, מאמרים אקדמיים, או חומרי לימוד מורכבים יכולה להיות אתגר גדול עבור אנשים עם הפרעת קשב. הקשב נוטה "לנדוד" באמצע הקריאה, מה שמוביל לצורך לקרוא שוב ושוב. מודל שפה יכול לסכם, לארגן ולהנגיש מידע בדרך שמותאמת לצרכים האישיים.</p>
+            <p class="situation-label">הסיטואציה:</p>
+            <p>רונית, חוקרת עם הפרעת קשב, צריכה לסכם מאמר מדעי ארוך ומורכב. היא מתקשה לשמור על ריכוז לאורך כל הקריאה ומרגישה שהמידע "זורם החוצה".</p>
+          </div>
+          <div class="prompt-block">
+            <button class="copy-btn" onclick="copyPrompt(this)" aria-label="העתק פרומפט">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+              העתק
+            </button>
+            <div class="prompt-label">פרומפט לתרגול:</div>
+            <div class="prompt-text">קרא את המאמר המצורף וצור לי סיכום בשלוש רמות:
+1) סיכום בשלוש שורות — מה עיקר הטענה של המאמר?
+2) סיכום בעשר נקודות — הממצאים והרעיונות המרכזיים.
+3) סיכום מפורט לפי פרקים — עם הדגשת מושגי מפתח.
+בנוסף, צור לי רשימה של 5 שאלות שיעזרו לי לבדוק אם הבנתי את המאמר.</div>
+          </div>
+          <div class="note-block note-info">
+            <p><strong>שימו לב:</strong> כדי לתרגל את הפרומפט הזה, יש להעלות מאמר למודל השפה. אם יש לכם מאמר משלכם — מצוין, השתמשו בו! אם לא, הנה מאמר לדוגמה (גישה חופשית בפורמט PDF) שעוסק בדיוק בנושא הסדנה שלנו — בינה מלאכותית והפרעת קשב:
+<a href="https://pmc.ncbi.nlm.nih.gov/articles/PMC12018397/" target="_blank" rel="noopener">Artificial intelligence in ADHD: a global perspective on research hotspots, trends and clinical applications (PMC, 2025)</a></p>
+          </div>
+        </article>
+
+        <!-- Scenario 3 -->
+        <article class="scenario-card" data-scenario="3">
+          <div class="scenario-header">
+            <span class="scenario-num">3</span>
+            <span class="scenario-title">ניהול זמן ותכנון היום</span>
+            <span class="badge badge-yellow">ניהול זמן</span>
+          </div>
+          <div class="scenario-body">
+            <p>ניהול זמן הוא אחד האתגרים המרכזיים בהפרעת קשב. אנשים רבים מתארים תחושה של "עיוורון זמן" — קושי להעריך כמה זמן לוקחת משימה, נטייה לאחר, ותחושה שהיום "ברח" בלי שהספיקו מספיק. מודל שפה יכול לעזור לתכנן את היום בצורה ריאליסטית, לתעדף משימות, ולהכניס הפסקות.</p>
+            <p class="situation-label">הסיטואציה:</p>
+            <p>עמית, מתכנת עם הפרעת קשב, מתעורר בבוקר עם רשימה ארוכה של דברים לעשות. הוא מרגיש שהוא לא יספיק כלום ונכנס למצב של שיתוק.</p>
+          </div>
+          <div class="prompt-block">
+            <button class="copy-btn" onclick="copyPrompt(this)" aria-label="העתק פרומפט">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+              העתק
+            </button>
+            <div class="prompt-label">פרומפט לתרגול:</div>
+            <div class="prompt-text">הנה הרשימה שלי להיום: להגיש דוח לעבודה, לקבוע תור לרופא, לקנות מצרכים, לתקן באג בפרויקט, לענות על 15 מיילים, להתאמן, ולהכין ארוחת ערב. אני עובד מ-9 עד 18 ויש לי פגישת צוות ב-11. בבקשה עזור לי לסדר את היום בבלוקים של זמן. קח בחשבון שאני מתרכז הכי טוב בבוקר, שאני צריך הפסקה כל שעה, ושכנראה לא אספיק הכל — אז תגיד לי מה הכי חשוב לעשות היום ומה אפשר לדחות למחר.</div>
+          </div>
+        </article>
+
+        <!-- Scenario 4 -->
+        <article class="scenario-card" data-scenario="4">
+          <div class="scenario-header">
+            <span class="scenario-num">4</span>
+            <span class="scenario-title">עזרה בניסוח וכתיבה</span>
+            <span class="badge badge-purple">ארגון ותכנון</span>
+          </div>
+          <div class="scenario-body">
+            <p>אנשים עם הפרעת קשב מתארים לעיתים קרובות מצב שבו "יש המון רעיונות בראש, אבל הם לא יוצאים מסודרים לדף". הפער בין המחשבה לכתיבה יכול להיות מתסכל מאוד. מודל שפה יכול לשמש כ"שותף לכתיבה" — לעזור לארגן רעיונות, ליצור טיוטה ראשונה, או לשפר ניסוח קיים.</p>
+            <p class="situation-label">הסיטואציה:</p>
+            <p>דני, יועץ חינוכי, צריך לכתוב מכתב המלצה לתלמיד. הוא יודע מה הוא רוצה להגיד אבל כל פעם שהוא מתיישב לכתוב הוא נתקע אחרי שתי שורות.</p>
+          </div>
+          <div class="prompt-block">
+            <button class="copy-btn" onclick="copyPrompt(this)" aria-label="העתק פרומפט">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+              העתק
+            </button>
+            <div class="prompt-label">פרומפט לתרגול:</div>
+            <div class="prompt-text">אני צריך לכתוב מכתב המלצה לתלמיד שמגיש מועמדות לתוכנית מצטיינים. הנה מה שאני רוצה להעביר, בנקודות לא מסודרות:
+- התלמיד מאוד יצירתי ובעל חשיבה מחוץ לקופסה
+- הוא עזר לחברים שלו בלימודים למרות שלא היה חייב
+- הוא התמודד עם קשיים אישיים והצליח לשמור על ציונים גבוהים
+- הוא יזם פרויקט התנדבותי בבית הספר
+בבקשה עזור לי להפוך את הנקודות האלה למכתב המלצה מקצועי ומשכנע, באורך של כחצי עמוד, בטון חם אבל רציני.</div>
+          </div>
+        </article>
+
+        <!-- Scenario 5 -->
+        <article class="scenario-card" data-scenario="5">
+          <div class="scenario-header">
+            <span class="scenario-num">5</span>
+            <span class="scenario-title">הנגשת נושאים בצורה מעניינת ויצירתית</span>
+            <span class="badge badge-cyan">קשב וריכוז</span>
+          </div>
+          <div class="scenario-body">
+            <p>מוח עם הפרעת קשב "רעב" לגירויים. נושאים שנראים משעממים או חד-גוניים גורמים לקשב להיעלם תוך דקות. מודל שפה יכול להפוך כל נושא למעניין — באמצעות סיפורים, אנלוגיות, משחקים, או פשוט הצגה אחרת של החומר.</p>
+            <p class="situation-label">הסיטואציה:</p>
+            <p>רונן, מורה להיסטוריה עם הפרעת קשב, מתכנן שיעור על מלחמת העולם השנייה. הוא חושש שגם הוא וגם התלמידים יאבדו עניין במהלך השיעור.</p>
+          </div>
+          <div class="prompt-block">
+            <button class="copy-btn" onclick="copyPrompt(this)" aria-label="העתק פרומפט">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+              העתק
+            </button>
+            <div class="prompt-label">פרומפט לתרגול:</div>
+            <div class="prompt-text">אני מורה להיסטוריה בתיכון. השיעור הבא שלי הוא על הסיבות לפרוץ מלחמת העולם השנייה. אני רוצה להפוך אותו למרתק ואינטראקטיבי. לרשותי: כיתה עם מקרן, לתלמידים יש טלפונים ניידים, ויש לי גישה לחומרים שונים. בבקשה תן לי 5 רעיונות יצירתיים לפעילויות שיגרמו לתלמידים להיות פעילים בשיעור ולא רק לשבת ולהקשיב. לכל רעיון תוסיף הסבר קצר איך לבצע אותו, כמה זמן הוא לוקח, ומה הערך הלימודי שלו.</div>
+          </div>
+        </article>
+
+        <!-- Scenario 6 -->
+        <article class="scenario-card" data-scenario="6">
+          <div class="scenario-header">
+            <span class="scenario-num">6</span>
+            <span class="scenario-title">ויסות רגשי והתמודדות עם תסכול</span>
+            <span class="badge badge-pink">ויסות רגשי</span>
+          </div>
+          <div class="scenario-body">
+            <p>הפרעת קשב לא עוסקת רק בריכוז — היא כוללת גם קושי משמעותי בוויסות רגשי. רגשות עולים בעוצמה גבוהה ובמהירות, ולפעמים קשה "לרדת" מהם. מודל שפה יכול לשמש ככלי לעיבוד רגשי — מקום בטוח לשפוך מחשבות, לקבל פרספקטיבה, ולמצוא דרכים קונסטרוקטיביות להתמודד.</p>
+            <p class="situation-label">הסיטואציה:</p>
+            <p>לילך, עובדת סוציאלית, חזרה מפגישה קשה עם משפחה במצוקה. היא מרגישה מוצפת רגשית, כועסת, ואשמה — ומתקשה לארגן את מחשבותיה.</p>
+          </div>
+          <div class="prompt-block">
+            <button class="copy-btn" onclick="copyPrompt(this)" aria-label="העתק פרומפט">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+              העתק
+            </button>
+            <div class="prompt-label">פרומפט לתרגול:</div>
+            <div class="prompt-text">היתה לי פגישת עבודה מאוד קשה ואני מרגיש/ה מוצף/ת רגשית. אני מרגיש/ה כעס, תסכול, ואשמה — והכל מעורבב יחד. בבקשה עזור לי:
+1) לזהות ולהפריד בין הרגשות השונים שאני חווה כרגע
+2) להבין מה גרם לכל רגש
+3) לחשוב על צעד אחד קונקרטי שאני יכול/ה לעשות עכשיו כדי להרגיש קצת יותר טוב
+4) להחליט מה דורש פעולה מיידית ומה יכול לחכות למחר
+דבר אליי בטון רגוע ותומך.</div>
+          </div>
+          <div class="note-block note-warning">
+            <p><strong>הערה חשובה:</strong> מודל שפה יכול לעזור לארגן מחשבות ולהציע כיווני חשיבה, אך הוא אינו מחליף שיחה עם גורם מקצועי אנושי — מטפל, פסיכולוג, או עמית מקצועי. במצבים של עומס רגשי משמעותי, חשוב לפנות לאדם אמיתי שיכול להקשיב, להכיל ולהנחות. השתמשו במודל ככלי עזר ראשוני, לא כתחליף לתמיכה אנושית.</p>
+          </div>
+        </article>
+
+        <!-- Scenario 7 -->
+        <article class="scenario-card" data-scenario="7">
+          <div class="scenario-header">
+            <span class="scenario-num">7</span>
+            <span class="scenario-title">פישוט הוראות מורכבות</span>
+            <span class="badge badge-purple">ארגון ותכנון</span>
+          </div>
+          <div class="scenario-body">
+            <p>הוראות ארוכות ומפותלות יכולות לגרום לאנשים עם הפרעת קשב לתחושת בלבול ותסכול. המוח מנסה לעקוב אבל "מאבד" חלקים בדרך. מודל שפה יכול לקחת הוראות מורכבות ולהפוך אותן לרשימה ברורה ופשוטה.</p>
+            <p class="situation-label">הסיטואציה:</p>
+            <p>יוסי, סטודנט עם הפרעת קשב, קיבל הנחיות למטלה אקדמית מורכבת. הוא קורא אותן שוב ושוב ולא מצליח להבין מה בדיוק נדרש ממנו.</p>
+          </div>
+          <div class="prompt-block">
+            <button class="copy-btn" onclick="copyPrompt(this)" aria-label="העתק פרומפט">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+              העתק
+            </button>
+            <div class="prompt-label">פרומפט לתרגול:</div>
+            <div class="prompt-text">קיבלתי את ההנחיות הבאות למטלה ואני לא מצליח להבין אותן:
+
+[הדביקו כאן את ההנחיות למטלה שלכם — או השתמשו בהנחיות לדוגמה שמופיעות למטה]
+
+בבקשה עזור לי:
+1) לתרגם את ההנחיות לשפה פשוטה וברורה
+2) ליצור רשימת צעדים ממוספרת — מה לעשות קודם, מה אחר כך
+3) להדגיש את הדברים הכי חשובים שאסור לפספס (כמו מועד הגשה, פורמט, אורך)
+4) לתת לי טיפ אחד לכל שלב שיעזור לי להתחיל אותו</div>
+          </div>
+          <div class="note-block note-info">
+            <p><strong>אין לכם הנחיות למטלה משלכם?</strong> אין בעיה — הכנו הנחיות לדוגמה של מטלה אקדמית מורכבת. העתיקו אותן והדביקו בתוך הפרומפט במקום שמסומן, כדי לתרגל את השימוש במודל השפה.</p>
+          </div>
+          <div class="extra-block">
+            <button class="copy-btn" onclick="copyPrompt(this)" aria-label="העתק הנחיות מטלה לדוגמה">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+              העתק הנחיות
+            </button>
+            <div class="prompt-label">הנחיות מטלה לדוגמה — בינה מלאכותית והפרעת קשב:</div>
+            <div class="prompt-text">מטלת אמצע סמסטר — השפעת כלי בינה מלאכותית על תפקוד יומיומי של אנשים עם הפרעת קשב וריכוז
+
+הנחיות:
+יש לבצע סקירה ספרותית מקיפה של לפחות 8 מאמרים אקדמיים מכתבי עת שפיטים מהשנים 2020-2026, המתמקדים בשימוש בכלי בינה מלאכותית (מודלי שפה, אפליקציות חכמות, רובוטיקה טיפולית) לתמיכה באנשים עם הפרעת קשב וריכוז. יש לסנתז את הממצאים לכדי מודל מושגי שמתאר את ממדי התמיכה העיקריים, תוך התייחסות לתיאוריות מרכזיות בתחום כגון מודל התפקודים הניהוליים (Executive Functions) ומודל העיכוב ההתנהגותי של ברקלי.
+
+בהמשך, יש לתכנן הצעה להתערבות חינוכית או טיפולית שמשלבת כלי AI לתמיכה באוכלוסייה ספציפית (תלמידים, סטודנטים, או מבוגרים עם ADHD), כולל הצגת מטרות ההתערבות, תיאור הכלים, תוכנית יישום, ודיון ביתרונות, מגבלות ושיקולים אתיים.
+
+יש להגיש את העבודה בפורמט APA, באורך של 12-18 עמודים, לא כולל ביבליוגרפיה ונספחים. הערכת העבודה תתבסס על עומק הניתוח התיאורטי (35%), איכות ומקוריות הצעת ההתערבות (35%), ואיכות הכתיבה והעמידה בפורמט (30%).
+
+מועד הגשה: עד ה-15 לחודש הבא, עד השעה 23:59. הגשה באיחור תגרור הורדה של 5 נקודות ליום.</div>
+          </div>
+        </article>
+
+        <!-- Scenario 8 -->
+        <article class="scenario-card" data-scenario="8">
+          <div class="scenario-header">
+            <span class="scenario-num">8</span>
+            <span class="scenario-title">התמודדות עם דחיינות והתחלת משימות</span>
+            <span class="badge badge-teal">דחיינות</span>
+          </div>
+          <div class="scenario-body">
+            <p>דחיינות היא אולי הסימפטום המתסכל ביותר בהפרעת קשב. זה לא עצלות — המוח פשוט מתקשה "להידלק" כשאין גירוי מספיק או כשהמשימה נראית גדולה מדי. מודל שפה יכול לעזור ליצור "נקודת כניסה" קלה למשימה, כך שצעד ראשון קטן ימשוך אחריו צעדים נוספים.</p>
+            <p class="situation-label">הסיטואציה:</p>
+            <p>שירה, גרפיקאית, צריכה להתחיל לעבוד על פרויקט עיצוב ללקוח. היא כבר שלושה ימים דוחה את ההתחלה למרות שמועד ההגשה מתקרב.</p>
+          </div>
+          <div class="prompt-block">
+            <button class="copy-btn" onclick="copyPrompt(this)" aria-label="העתק פרומפט">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+              העתק
+            </button>
+            <div class="prompt-label">פרומפט לתרגול:</div>
+            <div class="prompt-text">אני צריך/ה להתחיל לעבוד על [תארו את המשימה שלכם] אבל כבר כמה ימים שאני דוחה את זה. אני יודע/ת שזה חשוב אבל כל פעם שאני מנסה להתחיל אני מרגיש/ה מוצף/ת. בבקשה תן לי משימת התחלה קטנטנה — משהו שלוקח 5 דקות מקסימום — שיעזור לי פשוט להתחיל. אחרי זה, תן לי עוד 3 צעדים קטנים שכל אחד לוקח לא יותר מ-15 דקות. אני רוצה להרגיש שאני מתקדם/ת גם אם לא גומר/ת הכל היום.</div>
+          </div>
+          <div class="note-block note-tip">
+            <p><strong>נסו את זה עכשיו:</strong> חשבו על משימה אמיתית שיש לכם על השולחן בימים אלו ואתם דוחים אותה. הכניסו אותה לתוך הפרומפט במקום שמסומן בסוגריים מרובעים, ובדקו איך מודל השפה מגיב. זו הדרך הכי טובה ללמוד — לתרגל על מקרה אמיתי.</p>
+          </div>
+        </article>
+
+        <!-- Scenario 9 -->
+        <article class="scenario-card" data-scenario="9">
+          <div class="scenario-header">
+            <span class="scenario-num">9</span>
+            <span class="scenario-title">ארגון מחשבות לפני שיחה או פגישה</span>
+            <span class="badge badge-purple">ארגון ותכנון</span>
+          </div>
+          <div class="scenario-body">
+            <p>אנשים עם הפרעת קשב מתארים לעיתים שהמחשבות שלהם "קופצות" בין נושאים. כשצריך להעביר מסר ברור — בפגישה, במייל, או בשיחה — הבלגן הפנימי עלול לגרום לתקשורת מבולבלת. מודל שפה יכול לעזור לקחת "שפיכת מוח" ולהפוך אותה למסר מסודר.</p>
+            <p class="situation-label">הסיטואציה:</p>
+            <p>מרים, מנהלת פרויקטים, צריכה לשלוח מייל מסכם לצוות שלה על כנס שהיא מפיקה. יש לה המון עדכונים אבל הם מעורבבים בראש.</p>
+          </div>
+          <div class="prompt-block">
+            <button class="copy-btn" onclick="copyPrompt(this)" aria-label="העתק פרומפט">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+              העתק
+            </button>
+            <div class="prompt-label">פרומפט לתרגול:</div>
+            <div class="prompt-text">אני צריך/ה לכתוב מייל לצוות שלי ויש לי המון דברים שמעורבבים בראש. הנה הכל כמו שזה יוצא, בלי סדר:
+
+[כתבו כאן את כל המחשבות שלכם בצורה חופשית, בלי לדאוג לסדר]
+
+בבקשה עזור לי לארגן את המידע הזה למייל ברור ומקצועי. חלק את זה לנושאים, הדגש מה דורש פעולה מהצוות, ווודא שהטון מקצועי אבל לא לחוץ.</div>
+          </div>
+          <div class="note-block note-tip">
+            <p><strong>המלצה:</strong> כדי להפיק מקסימום מהתרגיל הזה, ערכו את הפרומפט והתאימו אותו לתרחיש אמיתי מהחיים שלכם — מייל שצריכים לשלוח, שיחה שצריכים להתכונן אליה, או הודעה שמתלבטים איך לנסח. ככה הלמידה הופכת מתיאורטית למעשית.</p>
+          </div>
+        </article>
+
+        <!-- Scenario 10 -->
+        <article class="scenario-card" data-scenario="10">
+          <div class="scenario-header">
+            <span class="scenario-num">10</span>
+            <span class="scenario-title">זיכרון עבודה — מעקב אחרי פרטים</span>
+            <span class="badge badge-cyan">קשב וריכוז</span>
+          </div>
+          <div class="scenario-body">
+            <p>זיכרון העבודה — היכולת להחזיק מידע "בראש" תוך כדי עבודה — מוגבל יותר אצל אנשים עם הפרעת קשב. פרטים חשובים נשכחים, הוראות מתפספסות, ודברים "נופלים בין הכיסאות". מודל שפה יכול לשמש כ"לוח לבן חיצוני" — מקום לאחסן מידע ולחזור אליו בקלות.</p>
+            <p class="situation-label">הסיטואציה:</p>
+            <p>אורי, מהנדס תוכנה, חוזר מפגישת צוות ארוכה שבה דובר על הרבה נושאים. הוא זוכר את הרושם הכללי אבל לא את הפרטים הספציפיים של מה שהוא צריך לעשות.</p>
+          </div>
+          <div class="prompt-block">
+            <button class="copy-btn" onclick="copyPrompt(this)" aria-label="העתק פרומפט">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+              העתק
+            </button>
+            <div class="prompt-label">פרומפט לתרגול:</div>
+            <div class="prompt-text">הנה הרשימה/הסיכום/ההקלטה מהפגישה שלי:
+
+[הדביקו כאן תמלול, סיכום, או נקודות שזכרתם]
+
+בבקשה עזור לי לחלץ מתוך זה:
+1) מה המשימות הספציפיות שאני צריך לעשות (רק מה שנוגע אליי)
+2) מה הדדליינים
+3) מי אני צריך לתאם איתו
+4) מה ההחלטות שהתקבלו שחשוב לי לזכור
+תרכז את הכל בטבלה פשוטה שאוכל להדביק באפליקציית המשימות שלי.</div>
+          </div>
+        </article>
+
+        <!-- Scenario 11 -->
+        <article class="scenario-card" data-scenario="11">
+          <div class="scenario-header">
+            <span class="scenario-num">11</span>
+            <span class="scenario-title">הכנה לקראת מצבים חברתיים ומקצועיים</span>
+            <span class="badge badge-pink">ויסות רגשי</span>
+          </div>
+          <div class="scenario-body">
+            <p>מצבים חברתיים ומקצועיים — כמו ראיונות עבודה, שיחות קשות עם מנהלים, או פגישות הורים — עלולים ליצור חרדה וקושי "לשמור על קו". מודל שפה יכול לעזור להתכונן מראש, לתרגל תגובות, ולהרגיש מוכנים יותר.</p>
+            <p class="situation-label">הסיטואציה:</p>
+            <p>טל, מפתחת תוכנה, מתכוננת לראיון עבודה ודואגת שהיא תתחיל לדבר ולא תוכל לעצור, או שתאבד את חוט המחשבה באמצע תשובה.</p>
+          </div>
+          <div class="prompt-block">
+            <button class="copy-btn" onclick="copyPrompt(this)" aria-label="העתק פרומפט">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+              העתק
+            </button>
+            <div class="prompt-label">פרומפט לתרגול:</div>
+            <div class="prompt-text">יש לי ראיון עבודה מחר לתפקיד [שם התפקיד] בחברת [שם החברה]. אני נוטה לדבר הרבה ולאבד את הנקודה כשאני מתרגשת. בבקשה:
+1) שאל אותי 5 שאלות נפוצות בראיון כזה, אחת אחרי השנייה
+2) אחרי כל תשובה שלי, תן לי משוב — האם התשובה הייתה ממוקדת? ארוכה מדי?
+3) עזור לי לקצר תשובות ארוכות ל-2-3 משפטים מדויקים
+4) בסוף, תן לי כרטיסיית עזר עם 5 נקודות מפתח שאני יכולה לזכור לפני שנכנסת לראיון.</div>
+          </div>
+        </article>
+
+        <!-- Scenario 12 -->
+        <article class="scenario-card" data-scenario="12">
+          <div class="scenario-header">
+            <span class="scenario-num">12</span>
+            <span class="scenario-title">יצירת שגרות והרגלים</span>
+            <span class="badge badge-yellow">ניהול זמן</span>
+          </div>
+          <div class="scenario-body">
+            <p>שגרה עקבית היא אחד הכלים החזקים ביותר לניהול הפרעת קשב, אבל גם אחד הקשים ביותר לבנות. מודל שפה יכול לעזור לעצב שגרה מותאמת אישית, ריאליסטית, ושלוקחת בחשבון את האתגרים הייחודיים של הפרעת קשב.</p>
+            <p class="situation-label">הסיטואציה:</p>
+            <p>יונתן, סטודנט ועובד בחצי משרה, מרגיש שכל יום הוא כאוטי ושונה. הוא רוצה ליצור שגרת בוקר שתעזור לו להתחיל את היום בצורה טובה יותר.</p>
+          </div>
+          <div class="prompt-block">
+            <button class="copy-btn" onclick="copyPrompt(this)" aria-label="העתק פרומפט">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+              העתק
+            </button>
+            <div class="prompt-label">פרומפט לתרגול:</div>
+            <div class="prompt-text">אני רוצה ליצור שגרת בוקר שתעבוד בשבילי. אני קם ב-7:00 וצריך לצאת מהבית ב-8:30. דברים שחשובים לי: לאכול ארוחת בוקר, להתלבש, לבדוק מה יש לי היום. דברים שקורים לי כל בוקר: אני נתקע בטלפון, אני שוכח דברים ויוצא מהבית בלי הכל, אני מרגיש לחוץ כי תמיד מאחר. בבקשה עזור לי לבנות שגרת בוקר של 90 דקות שכוללת:
+- סדר ברור של פעולות עם זמנים
+- תזכורות למה שאני תמיד שוכח
+- טיפ אחד נגד הנטייה שלי להיתקע בטלפון
+השגרה צריכה להיות פשוטה מספיק כדי שאוכל לעקוב אחריה גם ביום שאני עייף.</div>
+          </div>
+        </article>
+
+      </section>
+
+      <!-- Tips Section -->
+      <section id="tips" class="section">
+        <div class="section-title">
+          <h2>טיפים כלליים</h2>
+          <p>7 טיפים לעבודה יעילה עם מודלי שפה עבור אנשים עם הפרעת קשב</p>
+        </div>
+        <div class="tips-grid">
+          <div class="tip-card">
+            <span class="tip-num">1</span>
+            <p><strong>היו ספציפיים</strong> — ככל שהפרומפט מדויק יותר, התוצאה טובה יותר. במקום "עזור לי לכתוב", כתבו "עזור לי לכתוב מייל קצר של 5 שורות למנהל שלי על דחיית פגישה".</p>
+          </div>
+          <div class="tip-card">
+            <span class="tip-num">2</span>
+            <p><strong>בקשו פורמט מותאם</strong> — אם רשימות עוזרות לכם, בקשו רשימות. אם טבלאות — בקשו טבלאות. התאימו את הפלט לדרך שבה אתם הכי טוב קולטים מידע.</p>
+          </div>
+          <div class="tip-card">
+            <span class="tip-num">3</span>
+            <p><strong>השתמשו במודל כ"גוף שומר"</strong> — אם אתם נוטים לשכוח דברים, ספרו למודל על ההקשר בתחילת השיחה. הוא יזכור עבורכם לאורך כל השיחה.</p>
+          </div>
+          <div class="tip-card">
+            <span class="tip-num">4</span>
+            <p><strong>אל תנסו להיות מושלמים בפרומפט</strong> — "שפיכת מוח" מבולגנת היא בסדר גמור. אתם יכולים תמיד לבקש מהמודל לארגן את מה שכתבתם.</p>
+          </div>
+          <div class="tip-card">
+            <span class="tip-num">5</span>
+            <p><strong>בקשו שהמודל ישאל אתכם שאלות</strong> — במקום לנסות לחשוב על הכל מראש, תנו למודל מידע בסיסי ובקשו ממנו לשאול אתכם שאלות הבהרה.</p>
+          </div>
+          <div class="tip-card">
+            <span class="tip-num">6</span>
+            <p><strong>חלקו משימות גדולות לשיחות קטנות</strong> — עדיף כמה שיחות קצרות וממוקדות משיחה אחת ארוכה ומורכבת.</p>
+          </div>
+          <div class="tip-card">
+            <span class="tip-num">7</span>
+            <p><strong>זכרו: זה כלי, לא תחליף</strong> — מודל שפה הוא עוזר מצוין, אבל הוא לא מחליף טיפול מקצועי, תרופות, או ליווי של מטפל.</p>
+          </div>
+        </div>
+      </section>
+
+    </div><!-- .container -->
+
+    <!-- Footer -->
+    <footer class="site-footer">
+      <a href="https://linktr.ee/TomHagiladi" target="_blank" rel="noopener" aria-label="תום הגלעדי" style="display: inline-block; margin-block-end: var(--space-sm);">
+        <img src="logo.png" alt="תום הגלעדי — לוגו" height="40" style="margin-inline: auto;">
+      </a>
+      <p>נוצר על ידי <a href="https://linktr.ee/TomHagiladi" target="_blank" rel="noopener">תום הגלעדי</a></p>
+    </footer>
+  </main>
+
+  <script>
+    // Copy prompt to clipboard
+    function copyPrompt(btn) {
+      const block = btn.closest('.prompt-block') || btn.closest('.extra-block');
+      const text = block.querySelector('.prompt-text').textContent.trim();
+      navigator.clipboard.writeText(text).then(() => {
+        btn.classList.add('copied');
+        const orig = btn.innerHTML;
+        btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg> הועתק!';
+        setTimeout(() => {
+          btn.classList.remove('copied');
+          btn.innerHTML = orig;
+        }, 2000);
+      }).catch(() => {
+        // Fallback for older browsers
+        const ta = document.createElement('textarea');
+        ta.value = text;
+        ta.style.position = 'fixed';
+        ta.style.opacity = '0';
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand('copy');
+        document.body.removeChild(ta);
+        btn.classList.add('copied');
+        const orig = btn.innerHTML;
+        btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg> הועתק!';
+        setTimeout(() => {
+          btn.classList.remove('copied');
+          btn.innerHTML = orig;
+        }, 2000);
+      });
+    }
+
+    // Scroll-based reveal for scenario cards
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('visible');
+          observer.unobserve(entry.target);
+        }
+      });
+    }, { threshold: 0.1, rootMargin: '0px 0px -50px 0px' });
+
+    document.querySelectorAll('.scenario-card').forEach(card => observer.observe(card));
+
+    // Mobile nav toggle
+    document.querySelector('.nav-toggle')?.addEventListener('click', function() {
+      const links = document.querySelector('.navbar-links');
+      links.classList.toggle('open');
+      this.setAttribute('aria-expanded', links.classList.contains('open'));
+    });
+
+    // Close mobile nav on link click
+    document.querySelectorAll('.navbar-links a').forEach(a => {
+      a.addEventListener('click', () => {
+        document.querySelector('.navbar-links').classList.remove('open');
+        document.querySelector('.nav-toggle')?.setAttribute('aria-expanded', 'false');
+      });
+    });
+  </script>
+</body>
+</html>
